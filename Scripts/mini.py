@@ -5,7 +5,7 @@ from mininet.link import TCLink
 from mininet.node import RemoteController
 from mininet.cli import CLI
 from mininet.log import setLogLevel
-import time, os
+import time
 import csv
 
 class SimpleLinkTopo(Topo):
@@ -16,6 +16,7 @@ class SimpleLinkTopo(Topo):
 
         h3 = self.addHost('h3')  # Server
         h4 = self.addHost('h4')  # Client
+        
         # Add a single switch
         s1 = self.addSwitch('s1')
         s2 = self.addSwitch('s2')
@@ -23,20 +24,21 @@ class SimpleLinkTopo(Topo):
 
         # Add links with 100 Mbps bandwidth, no loss, and no delay
         self.addLink(h1, s1, bw=availbw, loss=0, delay='0ms')
-        self.addLink(h2, s2, bw=availbw, loss=0, delay='0ms')
         self.addLink(h3, s1, bw=availbw, loss=0, delay='0ms')
+        
+        self.addLink(h2, s2, bw=availbw, loss=0, delay='0ms')
         self.addLink(h4, s2, bw=availbw, loss=0, delay='0ms')
+        
         self.addLink(s1, s2, bw=availbw, loss=0, delay='0ms')
 
 
 
 def run(availbw, crosstraffic):
-    # Set the log level to info to see detailed output
     setLogLevel('info')
     
-    # IP and port of the remote controller
-    controller_ip = '10.17.5.63'  # Change to the controller's IP address if not local
-    controller_port = 6653       # Default OpenFlow controller port
+    # IP and port of the remote Openflow SDN controller
+    controller_ip = '10.17.5.63'        # Change to the controller's IP address if not local
+    controller_port = 6653              # Default OpenFlow controller port
     
     # Initialize the topology
     topo = SimpleLinkTopo(availbw=availbw)
@@ -44,7 +46,7 @@ def run(availbw, crosstraffic):
     # Initialize the network with the custom topology and TCLink for link configuration
     net = Mininet(topo=topo, link=TCLink, controller=None)
 
-    # Add the remote controller to the network
+    # Add the remote SDN controller named 'c0' to the network
     remote_controller = RemoteController('c0', ip=controller_ip, port=controller_port)
     net.addController(remote_controller)
 
@@ -65,13 +67,9 @@ def run(availbw, crosstraffic):
     print("IP address of h4:", h4.IP())
 
 
-    # Start the receiver (client) on h2
-    SERVER_IP = "10.0.0.1"  # Can be adjusted as needed
-    SERVER_PORT = 6555
-
-    print(f"\n-------------introducing traffic---------\n")
+    print(f"\n-------------Introducing crosstraffic---------\n")
     # CLI(net)
-    h4.cmd(f"iperf -s -u > h4_iperf.txt 2>&1 &")
+    h4.cmd(f"iperf -s -u > h4_iperf.txt 2>&1 &")                    # start the UDP iperf server on h4
     time.sleep(2)
     h3.cmd(f"iperf -c {h4.IP()} -u -b {crosstraffic}M -t 29 > h3_iperf.txt 2>&1 &")   # CLI(net)
     h1.cmd(f"export PATH=$PATH:/usr/local/go/bin")
@@ -79,46 +77,38 @@ def run(availbw, crosstraffic):
 
     # CLI(net)
     print("--- Starting receiver (client) on h2 ---")
-    h2.cmd(f"go run temp.go > h2_output.txt 2>&1 &")
+    h2.cmd(f"go run receiver.go > h2_output.txt 2>&1 &")
 
-    # h2.cmd(f"iperf -s > h2_output.txt 2>&1 &")
-    # time.sleep(2)
-    # h1.cmd(f"iperf -c {h2.IP()} -t 12 > h1_output.txt 2>&1 &")
-    #  CLI(net) 
     # Wait for a short period to ensure receiver has started first
     time.sleep(1)
 
     # Start the sender (server) on h1
     print("--- Starting sender (server) on h1 ---")
-    h1.cmd(f"go run sender.go> h1_output.txt 2>&1 &")
+    h1.cmd(f"go run sender.go > h1_output.txt 2>&1 &")
 
-    # print(f"\n-------------introducing traffic---------\n")
-    # h1.cmd(f"iperf -s > h1_iperf.txt &")
-    # h2.cmd(f"iperf -c {h1.IP()} -b 20M -t 20 > h2_iperf.txt &")
     # Wait for the server to finish
-
     time.sleep(30) 
+    
     # Stop the network
     net.stop()
 
-
     data = [availbw, crosstraffic]  # This will be a row in CSV
     # Open the CSV file in append mode
-    with open("test_info.csv", "a", newline="") as file:
+    with open("../Data/test_info.csv", "a", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(data)
 
 
     print("--- Test completed, receiver and sender programs finished ---")
     
-    # Optionally, you can run Mininet's CLI for manual interaction if needed
+    # (Optional) To run Mininet's CLI for manual interaction, if needed
     # CLI(net)
 
 if __name__ == '__main__':
-    if len(sys.argv)!=3:
-        print("Usage: sudo python sinple_topo.py <bandwidth> <crosstraffic>")
+    if len(sys.argv) != 3:
+        print("Usage: sudo python mini.py <bandwidth> <crosstraffic>")
         sys.exit(1)
 
     bandwidth=float(sys.argv[1])
     crosstraffic= float(sys.argv[2])
-    run(availbw= bandwidth, crosstraffic= crosstraffic)
+    run(availbw = bandwidth, crosstraffic = crosstraffic)

@@ -74,7 +74,7 @@ func main() {
 	tcpConn.SetReadBuffer(1024 * 1024)
 
 	// Open CSV file in append mode
-	file, err := os.OpenFile("stream_rates_rin.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile("../Data/stream_rates_rin.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		fmt.Println("Error opening stream_rates_rin CSV file:", err)
 		return

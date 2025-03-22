@@ -13,8 +13,6 @@ import (
 const (
 	ReceiverIP = "10.0.0.2"
 	ListenIP   = "10.0.0.2"
-	//ReceiverIP = "10.17.5.63"
-	//ListenIP   = "10.17.5.63"
 	UDPPort    = 5005
 	TCPPort    = 6000
 	PacketSize = 1500
@@ -69,7 +67,7 @@ func main() {
 		return
 	}
 	defer fd.Close()
-	// Reduce OS receive buffer to 8 KB (default is often 208 KB or more)
+	// Reduce OS receive buffer to 8 KB or 512 KB (default is often 208 KB or more) -> improve latency for small pkt streams
 	err = syscall.SetsockoptInt(int(fd.Fd()), syscall.SOL_SOCKET, syscall.SO_RCVBUF, 512*1024)
 	if err != nil {
 		fmt.Println("Error setting SO_RCVBUF:", err)
@@ -81,9 +79,9 @@ func main() {
 		fmt.Println("Error setting SO_REUSEPORT:", err)
 	}
 
-//	udpConn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+	//	udpConn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 
-	fmt.Println("UDP receiver is running on port 5000...")
+	fmt.Println("UDP receiver is running on port %d...", UDPPort)
 
 	// Create TCP listener
 	tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", ListenIP, TCPPort))
@@ -111,7 +109,7 @@ func main() {
 
 	fmt.Println("TCP connection established. Now waiting for UDP probing packets...")
 
-	file, err := os.OpenFile("stream_rates_rout.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile("../Data/stream_rates_rout.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		fmt.Println("Error opening CSV file:", err)
 		return
@@ -299,4 +297,3 @@ func main() {
 	fmt.Println("Achieved rates written to CSV!")
 
 }
-
