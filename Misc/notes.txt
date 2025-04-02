@@ -1,0 +1,31 @@
+Setting up remote SDN controller @ 10.17.5.63:6653 :
+(using Ryu)
+>> ryu-manager --ofp-tcp-listen-port 6653 ryu.app.simple_switch
+
+To verify controller is running:
+>> netstat -an | grep 6653
+
+To verify if MiniNet is connected to Controller:
+(after running mini.py, to check mininet switch connection)
+>> sudo ovs-vsctl show
+    (is_connected MUST be true,          i.e., bridge s1-s2 connected)
+
+
+===================================================================================================
+Dependencies:
+>> sudo apt install netcat iperf openvswitch-switch golang-go
+
+
+===================================================================================================
+Installing mininet:
+>> git clone https://github.com/mininet/mininet.git
+>> cd mininet
+>> sudo ./util/install.sh -a
+
+Verify installation:
+>> sudo mn --test pingall
+
+
+===================================================================================================
+Verifying if ryu is installed:
+>> ryu-manager --version
