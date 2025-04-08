@@ -8,6 +8,11 @@ from mininet.cli import CLI
 from mininet.log import setLogLevel
 import time
 import csv
+import os
+
+# Constants
+DATA_DIR = "../Data_D2"           # Directory to save the data
+LOG_DIR = "../Logs"               # Directory to save the logs
 
 class SimpleLinkTopo(Topo):
     def build(self, availbw):
@@ -52,6 +57,21 @@ def check_controller(controller_ip, controller_port):
         print("[ERROR] 'nc' command not found. Install netcat(nc) to check the controller status.")
         return False
     
+def check_dirs():
+    # Check if the Logs directory exists, if not create it
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
+        print("[SUCCESS] Created Logs directory.")
+    else:
+        print("[INFO] Logs directory already exists.")
+
+    # Check if the NewData directory exists, if not create it
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR)
+        print(f"[SUCCESS] Created {os.path.basename(DATA_DIR)} directory.")
+    else:
+        print(f"[INFO] {os.path.basename(DATA_DIR)} directory already exists.")
+
 
 # run a Mininet simulation with a remote OpenFlow SDN controller & crosstraffic
 def run(availbw, crosstraffic):
@@ -75,23 +95,26 @@ def run(availbw, crosstraffic):
     remote_controller = RemoteController('c0', ip=controller_ip, port=controller_port)
     net.addController(remote_controller)
 
+    # Check if the directories for logs and data exist, if not create them
+    check_dirs()
+
     # Start the network -> launch topology and connect the nodes
-    print("[INFO] Starting Mininet network...")
+    print("\n[INFO] Starting Mininet network...")
     net.start()
 
     # retrieve the hosts IP addresses
     h1, h2, h3, h4 = net.get('h1'), net.get('h2'), net.get('h3'), net.get('h4')
     print(f"[INFO] IPs assigned: \nh1={h1.IP()},\t h2={h2.IP()}, \nh3={h3.IP()},\t h4={h4.IP()}")
-
-
-    print(f"\n[INFO] -------------Introducing crosstraffic---------\n")
     # CLI(net)
-    h4.cmd(f"iperf -s -u > ../Logs/h4_iperf.txt 2>&1 &")                    # start the UDP iperf server on h4
+
+
+    print(f"\n[INFO] Introducing crosstraffic!!!")
+    h4.cmd(f"iperf -s -u > {LOG_DIR}/h4_iperf.txt 2>&1 &")                    # start the UDP iperf server on h4
     print("[SUCCESS] Started UDP iperf server on h4")
     time.sleep(2)
 
     # running the UDP iperf client on h3, to send crosstraffic to h4 for 30 seconds
-    h3.cmd(f"iperf -c {h4.IP()} -u -b {crosstraffic}M -t 30 > ../Logs/h3_iperf.txt 2>&1 &") 
+    h3.cmd(f"iperf -c {h4.IP()} -u -b {crosstraffic}M -t 30 > {LOG_DIR}/h3_iperf.txt 2>&1 &") 
     print("[SUCCESS] Started UDP iperf client on h3")  
     
     # Setting the environment variable for Go
@@ -100,21 +123,20 @@ def run(availbw, crosstraffic):
     # CLI(net)
 
     print("[INFO] Starting receiver(client) on h2")
-    h2.cmd(f"go run receiver.go > ../Logs/h2_output.txt 2>&1 &")
+    h2.cmd(f"go run *.go receiver > {LOG_DIR}/h2_output.txt 2>&1 &")
     time.sleep(1)           # allow receiver to start
 
     print("[INFO] Starting sender(server) on h1")
-    h1.cmd(f"go run sender.go > ../Logs/h1_output.txt 2>&1 &")
+    h1.cmd(f"go run *.go sender > {LOG_DIR}/h1_output.txt 2>&1 &")
 
     time.sleep(30)          # wait for the server to finish
     net.stop()
 
-
-    with open("../NewData/test_info.csv", "a", newline="") as file:
+    with open(f"{DATA_DIR}/test_info.csv", "a", newline="") as file:
         writer = csv.writer(file)
         writer.writerow([availbw, crosstraffic])
 
-    print("[SUCCESS] Results saved to '../NewData/test_info.csv'")
+    print(f"\n[SUCCESS] Results saved to '{os.path.basename(DATA_DIR)}/test_info.csv'")
     # (Optional) To run Mininet's CLI for manual interaction, if needed
     # CLI(net)
 

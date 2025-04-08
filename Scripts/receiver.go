@@ -9,30 +9,19 @@ import (
 	"encoding/csv"
 )
 
-const (
-	ReceiverIP = "10.0.0.2"
-	ListenIP   = "10.0.0.2"
-	UDPPort    = 5005
-	TCPPort    = 6000
-	PacketSize = 1500
-	NumPackets = 100
-	DeltaRK    = 20
-	BufferSize = 2048
-	Timeout    = 10 * time.Second
-)
 
 // set priority of receiving process(pid = 0) to -5 		{increase its priority, to avoid Skipping of packets}
-func setProcessPriority() error {
+func setProcessPriority_R() error {
 	err := syscall.Setpriority(syscall.PRIO_PROCESS, 0, -5)
 	if err != nil {
-		return fmt.Println("Failed to set priority:", err)
+		return fmt.Errorf("Failed to set priority:", err)
 	} 	
 	fmt.Println("Receiver priority set to -5")
 	return nil
 }
 
 // initialize UDP receiver socket with required settings
-func setupUDPReceiver() (*net.UDPConn, error) {
+func setupUDPReceiver_R() (*net.UDPConn, error) {
 	// Create UDP socket -> bind to the receiver IP and UDP port 
 	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", ListenIP, UDPPort))
 	if err != nil {
@@ -79,7 +68,7 @@ func setupUDPReceiver() (*net.UDPConn, error) {
 }
 
 // set up a TCP listener
-func setupTCPListener() (*net.TCPListener, error) {
+func setupTCPListener_R() (*net.TCPListener, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", ListenIP, TCPPort))
 	if err != nil {
 		return nil, fmt.Errorf("error resolving TCP address: %v", err)
@@ -107,15 +96,15 @@ func waitForTCPConnection(listener *net.TCPListener) (net.Conn, error) {
 }
 
 
-func main() {
+func runReceiver() {
 	// Set process priority to -5
-	if err := setProcessPriority(); err != nil {
+	if err := setProcessPriority_R(); err != nil {
 		fmt.Println(err)
 		return
 	}
 	
 	// setup UDP receiver
-	udpConn, err := setupUDPReceiver()
+	udpConn, err := setupUDPReceiver_R()
 	if err != nil {
 		fmt.Println("Error setting up UDP receiver:", err)
 		return
@@ -123,7 +112,7 @@ func main() {
 	defer udpConn.Close()
 
 	// Set up TCP listener
-	tcpListener, err := setupTCPListener()
+	tcpListener, err := setupTCPListener_R()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -139,7 +128,7 @@ func main() {
 	defer tcpConn.Close()
 
 	// Open CSV file for writing
-	file, err := os.OpenFile("../NewData/stream_rates_rout.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile(DATA_DIR+"/stream_rates_rout.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		fmt.Println("Error opening stream_rates_rout CSV file:", err)
 		return

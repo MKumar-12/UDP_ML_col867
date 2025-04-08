@@ -9,23 +9,12 @@ import (
 	"encoding/csv"
 )
 
-const (
-	ReceiverIP = "10.0.0.2"
-	ListenIP   = "10.0.0.2"
-	UDPPort    = 5005
-	TCPPort    = 6000
-	PacketSize = 1500
-	NumPackets = 100
-	DeltaRK    = 20
-	BufferSize = 2048
-	Timeout    = 2 * time.Second
-)
 
 // set priority of sender process(pid = 0) to -10 		{increase its priority, to avoid Skipping of packets}
 func setProcessPriority() error {
 	err := syscall.Setpriority(syscall.PRIO_PROCESS, 0, -10)
 	if err != nil {
-		return fmt.Println("Failed to set priority:", err)
+		return fmt.Errorf("Failed to set priority:", err)
 	} 	
 	fmt.Println("Sender priority set to -10")
 	return nil
@@ -53,7 +42,7 @@ func setupUDPReceiver() (*net.UDPConn, error) {
 }
 
 // set up a TCP connection for receiving delta_r
-func setupTCPListener() (*net.TCPListener, error) {
+func setupTCPListener() (*net.TCPConn, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", ReceiverIP, TCPPort))
 	if err != nil {
 		return nil, fmt.Errorf("error resolving TCP address: %v", err)
@@ -74,7 +63,7 @@ func setupTCPListener() (*net.TCPListener, error) {
 }
 
 
-func main() {
+func runSender() {
 	// Set process priority to -10
 	if err := setProcessPriority(); err != nil {
 		fmt.Println(err)
@@ -98,7 +87,7 @@ func main() {
 	defer tcpConn.Close()
 
 	// Open CSV file in append mode
-	file, err := os.OpenFile("../NewData/stream_rates_rin.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	file, err := os.OpenFile(DATA_DIR+"/stream_rates_rin.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		fmt.Println("Error opening stream_rates_rin CSV file:", err)
 		return
