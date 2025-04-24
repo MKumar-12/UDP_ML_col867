@@ -11,7 +11,7 @@ import csv
 import os
 
 # Constants
-DATA_DIR = "../Data_D2"           # Directory to save the data
+DATA_DIR = "../Data_D3"           # Directory to save the data
 LOG_DIR = "../Logs"               # Directory to save the logs
 
 class SimpleLinkTopo(Topo):

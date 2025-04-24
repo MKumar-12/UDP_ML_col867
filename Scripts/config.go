@@ -18,7 +18,7 @@ const (
 	DeltaRK    = 20
 	BufferSize = 2048
 	Timeout    = 2 * time.Second
-	DATA_DIR = "../Data_D2"
+	DATA_DIR = "../Data_D3"
 )
 
 
